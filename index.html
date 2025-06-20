@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Scanner Web-App</title>
+<style>
+  body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+      Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+    background: #121212; /* fast schwarz */
+    color: #ddd; /* helles Grau für Text */
+    padding: 20px;
+    margin: 0;
+  }
+  h1 {
+    color: #c49f19; /* dezentes Gold */
+    margin-bottom: 15px;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+  button, input {
+    font-size: 1rem;
+    padding: 6px 12px;
+    margin: 5px 5px 5px 0;
+    border-radius: 6px;
+    border: 1px solid #444; /* dunkles Grau */
+    background: #222; /* dunkler Hintergrund */
+    color: #ddd;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+  }
+  button {
+    cursor: pointer;
+    border-color: #c49f19;
+    background: #1a1a1a;
+    box-shadow: 0 0 6px #c49f19aa;
+  }
+  button:hover {
+    background: #3b3b3b;
+    border-color: #e1c85e;
+    box-shadow: 0 0 12px #e1c85e;
+    color: #fff;
+  }
+  input {
+    border-color: #555;
+    background: #222;
+    color: #ddd;
+  }
+  input[type=number] {
+    width: 60px;
+  }
+  #scanner {
+    width: 320px;
+    height: 320px;
+    background: #000;
+    margin: 20px 0;
+    border-radius: 8px;
+    box-shadow: 0 0 12px #c49f19cc inset;
+  }
+  #overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(5px);
+  }
+  .popup {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    background: #222;
+    border: 1px solid #444;
+    padding: 20px;
+    border-radius: 10px;
+    transform: translate(-50%, -50%);
+    max-width: 90vw;
+    max-height: 90vh;
+    overflow-y: auto;
+    z-index: 1000;
+    color: #ddd;
+    box-shadow: 0 0 20px #c49f19cc;
+  }
+  .popup label {
+    display: block;
+    margin-top: 10px;
+    color: #bbb;
+  }
+  .popup input {
+    width: 100%;
+    padding: 6px;
+    margin-top: 4px;
+    border: 1px solid #555;
+    background: #111;
+    color: #ddd;
+    border-radius: 6px;
+  }
+  .popup-buttons {
+    margin-top: 15px;
+    text-align: right;
+  }
+
+  /* Kachelansicht modernisiert */
+  .category-group {
+    margin-bottom: 30px;
+  }
+  .category-title {
+    font-weight: 700;
+    font-size: 1.3rem;
+    margin-bottom: 10px;
+    border-bottom: 2px solid #c49f19;
+    padding-bottom: 6px;
+    color: #ddd;
+    letter-spacing: 0.5px;
+  }
+  .items-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+  .item-tile {
+    background: #1e1e1e;
+    border: 1px solid #4a4a4a;
+    border-radius: 10px;
+    padding: 14px 16px;
+    width: calc(25% - 14px);
+    box-sizing: border-box;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 150px;
+    color: #ccc;
+    transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+  .item-tile:hover {
+    background: #2e2e2e;
+    border-color: #c49f19;
+    box-shadow: 0 0 15px #c49f19cc;
+    color: #fff;
+  }
+  .item-name {
+    font-weight: 700;
+    margin-bottom: 6px;
+    font-size: 1.1rem;
+    color: #f0d85f;
+  }
+  .item-category {
+    font-size: 0.9rem;
+    color: #888;
+    margin-bottom: 10px;
+  }
+  .item-info {
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+    color: #aaa;
+  }
+  .item-quantities {
+    display: flex;
+    gap: 8px;
+    justify-content: space-between;
+  }
+  .item-quantities input {
+    width: 60px;
+    padding: 6px 8px;
+    font-size: 0.9rem;
+    border-radius: 6px;
+    border: 1px solid #555;
+    background: #111;
+    color: #ddd;
+  }
+  .item-actions {
+    margin-top: 10px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .item-actions button {
+    font-size: 1rem;
+    padding: 6px 14px;
+    border: 1px solid #555;
+    border-radius: 8px;
+    background: #1a1a1a;
+    color: #ddd;
+    cursor: pointer;
+    transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+  .item-actions button:hover {
+    background: #3b3b3b;
+    border-color: #c49f19;
+    box-shadow: 0 0 12px #c49f19cc;
+    color: #fff;
+  }
+
+  /* Responsive: weniger Items auf kleinen Bildschirmen */
+  @media (max-width: 768px) {
+    .item-tile {
+      width: calc(33.33% - 14px);
+    }
+  }
+  @media (max-width: 480px) {
+    .item-tile {
+      width: calc(50% - 14px);
+    }
+  }
+</style>
+
+</head>
+<body>
+
+<h1>Inventurzähler</h1>
+
+<div class="controls">
+  <button id="startScanBtn">📷 Code scannen</button>
+  <button id="exportPdfBtn">📄 PDF Export</button>
+  <button id="resetBtn">🔁 Mengen zurücksetzen</button>
+</div>
+
+<div id="scanner"></div>
+
+<form id="addItemForm">
+  <h3>Neues Item hinzufügen</h3>
+  <input id="code" placeholder="Code" required autocomplete="off" />
+  <input id="name" placeholder="Name" required autocomplete="off" />
+  <input id="category" placeholder="Kategorie" autocomplete="off" />
+  <input id="futura" placeholder="Futura Nummer" autocomplete="off" />
+  <button type="submit">➕ Hinzufügen</button>
+</form>
+
+<div class="controls">
+  <input id="searchInput" placeholder="Suche (Name, Kategorie, Futura, Code)" />
+</div>
+
+<!-- Container für Kategorien und Items in Kacheln -->
+<div id="itemList"></div>
+
+<div id="overlay"></div>
+
+<div id="popup" class="popup">
+  <h3>Mengen ändern für: <span id="popupItemName"></span></h3>
+  <label for="popupPck">Pck</label><input type="number" id="popupPck" min="0" value="0" />
+  <label for="popupStk">Stk</label><input type="number" id="popupStk" min="0" value="0" />
+  <label for="popupPrt">Prt</label><input type="number" id="popupPrt" min="0" value="0" />
+  <div class="popup-buttons">
+    <button id="popupCancelBtn">Abbrechen</button>
+    <button id="popupSaveBtn">Speichern</button>
+  </div>
+</div>
+
+<div id="editPopup" class="popup">
+  <h3>Item bearbeiten</h3>
+  <label for="editName">Name</label><input id="editName" autocomplete="off" />
+  <label for="editCategory">Kategorie</label><input id="editCategory" autocomplete="off" />
+  <label for="editFutura">Futura Nummer</label><input id="editFutura" autocomplete="off" />
+  <label for="editCode">Code</label><input id="editCode" autocomplete="off" />
+  <div class="popup-buttons">
+    <button id="editCancelBtn">Abbrechen</button>
+    <button id="editSaveBtn">Speichern</button>
+  </div>
+</div>
+
+<div id="addPopup" class="popup">
+  <h3>Neues Item hinzufügen</h3>
+  <label>Code</label><input id="addPopupCode" disabled />
+  <label>Name</label><input id="addPopupName" autocomplete="off" />
+  <label>Kategorie</label><input id="addPopupCategory" autocomplete="off" />
+  <label>Futura Nummer</label><input id="addPopupFutura" autocomplete="off" />
+  <div class="popup-buttons">
+    <button id="addCancelBtn">Abbrechen</button>
+    <button id="addSaveBtn">Speichern</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script>
+  (() => {
+    let items = JSON.parse(localStorage.getItem("items") || "[]");
+    let currentEditIndex = null;
+    let currentQtyEditIndex = null;
+    let currentAddCode = null;
+    const itemListEl = document.getElementById("itemList");
+    const searchInput = document.getElementById("searchInput");
+
+    // Hilfsfunktion: sortiert Items nach Kategorie und gruppiert sie
+    function groupItemsByCategory(items) {
+      const grouped = {};
+      items.forEach(it => {
+        const cat = it.category || "Unkategorisiert";
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(it);
+      });
+      return grouped;
+    }
+
+    // Render item list als Kacheln gruppiert nach Kategorie
+    function renderList() {
+      const filter = searchInput.value.toLowerCase();
+      // Gefilterte Items
+      const filteredItems = items.filter(it =>
+        [it.name, it.category, it.futura, it.code].some(x => (x||'').toLowerCase().includes(filter))
+      );
+
+      // Items gruppieren nach Kategorie
+      const grouped = groupItemsByCategory(filteredItems);
+
+      // Sortiere Kategorien alphabetisch
+      const sortedCategories = Object.keys(grouped).sort((a,b) => a.localeCompare(b));
+
+      itemListEl.innerHTML = '';
+
+      sortedCategories.forEach(category => {
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'category-group';
+
+        const title = document.createElement('div');
+        title.className = 'category-title';
+        title.textContent = category;
+        groupDiv.appendChild(title);
+
+        const grid = document.createElement('div');
+        grid.className = 'items-grid';
+
+        grouped[category].forEach((it, i) => {
+          const idx = items.indexOf(it); // Index in Original-Array
+          const tile = document.createElement('div');
+          tile.className = 'item-tile';
+          tile.tabIndex = 0; // Fokusfähig
+          tile.title = `Name: ${it.name}\nKategorie: ${it.category}\nFutura: ${it.futura}\nCode: ${it.code}`;
+
+          tile.innerHTML = `
+            <div class="item-name">${it.name}</div>
+            <div class="item-category">${it.category || ''}</div>
+            <div class="item-info">Futura: ${it.futura || '-'}</div>
+            <div class="item-info">Code: ${it.code}</div>
+            <div class="item-quantities">
+              <input type="number" min="0" value="${it.pck}" data-type="pck" title="Pck" />
+              <input type="number" min="0" value="${it.stk}" data-type="stk" title="Stk" />
+              <input type="number" min="0" value="${it.prt}" data-type="prt" title="Prt" />
+            </div>
+            <div class="item-actions">
+              <button class="delete-btn" title="Löschen">🗑️</button>
+              <button class="editqty-btn" title="Mengen bearbeiten">✏️</button>
+            </div>
+          `;
+
+          // Klick auf Tile öffnet Edit-Popup
+          tile.addEventListener('click', () => openEditPopup(idx));
+          tile.addEventListener('keydown', e => { if(e.key === 'Enter') openEditPopup(idx); });
+
+          // Inputs für Mengen bearbeiten (stoppen event bubbling, da tile auch klickbar)
+          tile.querySelectorAll('input[type=number]').forEach(input => {
+            input.addEventListener('click', e => e.stopPropagation());
+            input.addEventListener('change', e => {
+              const type = e.target.dataset.type;
+              items[idx][type] = parseInt(e.target.value) || 0;
+              saveItems();
+            });
+          });
+
+          // Delete Button
+          tile.querySelector('.delete-btn').addEventListener('click', e => {
+            e.stopPropagation();
+            if(confirm(`Artikel "${items[idx].name}" wirklich löschen?`)) {
+              items.splice(idx,1);
+              saveItems();
+              renderList();
+            }
+          });
+
+          // Edit Mengen Button
+          tile.querySelector('.editqty-btn').addEventListener('click', e => {
+            e.stopPropagation();
+            openQtyPopup(idx);
+          });
+
+          grid.appendChild(tile);
+        });
+
+        groupDiv.appendChild(grid);
+        itemListEl.appendChild(groupDiv);
+      });
+    }
+
+    // Save to localStorage
+    function saveItems() {
+      localStorage.setItem("items", JSON.stringify(items));
+    }
+
+    // Clear form fields
+    function clearForm() {
+      ['code','name','category','futura'].forEach(id => document.getElementById(id).value = '');
+    }
+
+    // Add item from form
+    document.getElementById("addItemForm").addEventListener('submit', e => {
+      e.preventDefault();
+      const code = document.getElementById("code").value.trim();
+      const name = document.getElementById("name").value.trim();
+      const category = document.getElementById("category").value.trim();
+      const futura = document.getElementById("futura").value.trim();
+      if(!code || !name) {
+        alert("Name und Code sind Pflichtfelder.");
+        return;
+      }
+      if(items.find(i => i.code === code)) {
+        alert("Dieser Code existiert bereits. Bitte Mengen über Scanner bearbeiten.");
+        return;
+      }
+      items.push({ name, code, category, futura, pck:0, stk:0, prt:0 });
+      saveItems();
+      renderList();
+      clearForm();
+    });
+
+    // Search input event
+    searchInput.addEventListener('input', renderList);
+
+    // Overlay & popup helpers
+    const overlay = document.getElementById("overlay");
+    function showOverlay(popupId) {
+      overlay.style.display = 'block';
+      document.getElementById(popupId).style.display = 'block';
+    }
+    function closeAllPopups() {
+      overlay.style.display = 'none';
+      ['popup','editPopup','addPopup'].forEach(id => {
+        document.getElementById(id).style.display = 'none';
+      });
+      currentEditIndex = null;
+      currentQtyEditIndex = null;
+      currentAddCode = null;
+    }
+    overlay.addEventListener('click', closeAllPopups);
+
+    // Popup für Mengen bearbeiten
+    const popup = document.getElementById("popup");
+    const popupItemName = document.getElementById("popupItemName");
+    const popupPck = document.getElementById("popupPck");
+    const popupStk = document.getElementById("popupStk");
+    const popupPrt = document.getElementById("popupPrt");
+    document.getElementById("popupCancelBtn").addEventListener('click', closeAllPopups);
+    document.getElementById("popupSaveBtn").addEventListener('click', () => {
+      if(currentQtyEditIndex === null) return;
+      items[currentQtyEditIndex].pck = parseInt(popupPck.value) || 0;
+      items[currentQtyEditIndex].stk = parseInt(popupStk.value) || 0;
+      items[currentQtyEditIndex].prt = parseInt(popupPrt.value) || 0;
+      saveItems();
+      renderList();
+      closeAllPopups();
+    });
+    function openQtyPopup(index) {
+      currentQtyEditIndex = index;
+      const it = items[index];
+      popupItemName.textContent = it.name;
+      popupPck.value = it.pck || 0;
+      popupStk.value = it.stk || 0;
+      popupPrt.value = it.prt || 0;
+      showOverlay("popup");
+    }
+
+    // Popup zum Item bearbeiten
+    const editPopup = document.getElementById("editPopup");
+    const editName = document.getElementById("editName");
+    const editCategory = document.getElementById("editCategory");
+    const editFutura = document.getElementById("editFutura");
+    const editCode = document.getElementById("editCode");
+    document.getElementById("editCancelBtn").addEventListener('click', closeAllPopups);
+    document.getElementById("editSaveBtn").addEventListener('click', () => {
+      if(currentEditIndex === null) return;
+      const name = editName.value.trim();
+      const category = editCategory.value.trim();
+      const futura = editFutura.value.trim();
+      const code = editCode.value.trim();
+      if(!name || !code) {
+        alert("Name und Code sind Pflichtfelder.");
+        return;
+      }
+      // Prüfe ob Code schon von anderem Item verwendet wird
+      if(items.some((it,i) => it.code === code && i !== currentEditIndex)) {
+        alert("Dieser Code existiert bereits.");
+        return;
+      }
+      const it = items[currentEditIndex];
+      it.name = name;
+      it.category = category;
+      it.futura = futura;
+      it.code = code;
+      saveItems();
+      renderList();
+      closeAllPopups();
+    });
+    function openEditPopup(index) {
+      currentEditIndex = index;
+      const it = items[index];
+      editName.value = it.name || '';
+      editCategory.value = it.category || '';
+      editFutura.value = it.futura || '';
+      editCode.value = it.code || '';
+      showOverlay("editPopup");
+    }
+
+    // Popup um Item über gescannten Code neu hinzuzufügen
+    const addPopup = document.getElementById("addPopup");
+    const addPopupCode = document.getElementById("addPopupCode");
+    const addPopupName = document.getElementById("addPopupName");
+    const addPopupCategory = document.getElementById("addPopupCategory");
+    const addPopupFutura = document.getElementById("addPopupFutura");
+    document.getElementById("addCancelBtn").addEventListener('click', () => {
+      closeAllPopups();
+      currentAddCode = null;
+    });
+    document.getElementById("addSaveBtn").addEventListener('click', () => {
+      const name = addPopupName.value.trim();
+      const category = addPopupCategory.value.trim();
+      const futura = addPopupFutura.value.trim();
+      if(!name) {
+        alert("Name ist Pflichtfeld.");
+        return;
+      }
+      if(items.some(it => it.code === currentAddCode)) {
+        alert("Item mit diesem Code existiert bereits.");
+        closeAllPopups();
+        currentAddCode = null;
+        return;
+      }
+      items.push({ name, code: currentAddCode, category, futura, pck:0, stk:0, prt:0 });
+      saveItems();
+      renderList();
+      closeAllPopups();
+      currentAddCode = null;
+    });
+    function openAddPopup(code) {
+      currentAddCode = code;
+      addPopupCode.value = code;
+      addPopupName.value = '';
+      addPopupCategory.value = '';
+      addPopupFutura.value = '';
+      showOverlay("addPopup");
+    }
+
+    // Scanner mit html5-qrcode
+    const scannerDiv = document.getElementById("scanner");
+    let html5QrcodeScanner = null;
+
+    document.getElementById("startScanBtn").addEventListener('click', () => {
+      if(html5QrcodeScanner) {
+        // Stoppen wenn schon aktiv
+        html5QrcodeScanner.stop().then(() => {
+          html5QrcodeScanner.clear();
+          html5QrcodeScanner = null;
+          scannerDiv.style.display = "none";
+          document.getElementById("startScanBtn").textContent = "📷 Code scannen";
+        });
+      } else {
+        scannerDiv.style.display = "block";
+        document.getElementById("startScanBtn").textContent = "✖ Stoppen";
+        html5QrcodeScanner = new Html5Qrcode("scanner");
+        Html5Qrcode.getCameras().then(cameras => {
+          if(cameras && cameras.length) {
+            html5QrcodeScanner.start(
+              { facingMode: "environment" },
+              {
+                fps: 10,
+                qrbox: 250
+              },
+              qrCodeMessage => {
+                handleScan(qrCodeMessage);
+                // Stoppe nach Scan
+                html5QrcodeScanner.stop().then(() => {
+                  html5QrcodeScanner.clear();
+                  html5QrcodeScanner = null;
+                  scannerDiv.style.display = "none";
+                  document.getElementById("startScanBtn").textContent = "📷 Code scannen";
+                });
+              },
+              errorMessage => {
+                // Fehler ignorieren oder ausgeben
+              }
+            ).catch(err => {
+              alert("Kamera kann nicht gestartet werden: " + err);
+              scannerDiv.style.display = "none";
+              html5QrcodeScanner = null;
+              document.getElementById("startScanBtn").textContent = "📷 Code scannen";
+            });
+          }
+        }).catch(err => {
+          alert("Kameras können nicht gefunden werden: " + err);
+        });
+      }
+    });
+
+    function handleScan(code) {
+      code = code.trim();
+      if(!code) return;
+      // Existiert Code schon?
+      const foundIndex = items.findIndex(it => it.code === code);
+      if(foundIndex >= 0) {
+        // Item vorhanden - Mengen bearbeiten
+        openQtyPopup(foundIndex);
+      } else {
+        // Neu hinzufügen
+        openAddPopup(code);
+      }
+    }
+
+    // Mengen zurücksetzen Button
+    document.getElementById("resetBtn").addEventListener('click', () => {
+      if(confirm("Alle Mengen zurücksetzen?")) {
+        items.forEach(it => {
+          it.pck = 0; it.stk = 0; it.prt = 0;
+        });
+        saveItems();
+        renderList();
+      }
+    });
+
+    // PDF Export
+    document.getElementById("exportPdfBtn").addEventListener('click', () => {
+      if(items.length === 0) {
+        alert("Keine Artikel zum Exportieren.");
+        return;
+      }
+      // jsPDF
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      doc.setFontSize(18);
+      doc.setTextColor("#c49f19");
+      doc.text("Inventur-Liste", 14, 22);
+
+      doc.setFontSize(12);
+      let y = 32;
+
+      // Gruppiere und sortiere Items
+      const grouped = groupItemsByCategory(items);
+      const sortedCategories = Object.keys(grouped).sort();
+
+      sortedCategories.forEach(category => {
+        doc.setTextColor("#c49f19");
+        doc.setFontSize(14);
+        if(y > 270) {
+          doc.addPage();
+          y = 20;
+        }
+        doc.text(category, 14, y);
+        y += 8;
+        doc.setFontSize(11);
+        doc.setTextColor("#000");
+
+        grouped[category].forEach(it => {
+          const line = `${it.name} | Pck: ${it.pck} Stk: ${it.stk} Prt: ${it.prt} | Futura: ${it.futura || '-'} | Code: ${it.code}`;
+          const splitLines = doc.splitTextToSize(line, 180);
+          if(y + splitLines.length * 7 > 280) {
+            doc.addPage();
+            y = 20;
+          }
+          doc.text(splitLines, 14, y);
+          y += splitLines.length * 7;
+        });
+        y += 10;
+      });
+
+      doc.save("Inventurliste.pdf");
+    });
+
+    // Initial render
+    renderList();
+
+  })();
+</script>
+
+</body>
+</html>
